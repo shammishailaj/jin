@@ -1,7 +1,9 @@
 package jin
 
-import "strconv"
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 // Scheme is a tool for creating non-nested JSONs.
 // It provides a struct for saving a JSON scheme for later usage.
@@ -23,6 +25,83 @@ func MakeScheme(keys ...string) *Scheme {
 // More information on Type Scheme example.
 func (s *Scheme) MakeJson(values ...interface{}) []byte {
 	return MakeJson(s.keys, values)
+}
+
+// MakeJsonString is main creation method for creating JSON's from Schemes.
+// More information on Type Scheme example.
+func (s *Scheme) MakeJsonString(values ...string) []byte {
+	return MakeJsonString(s.keys, values)
+}
+
+// MutateJson use for mutating a json to another json with a scheme.
+func (s *Scheme) MutateJson(json []byte) ([]byte, error) {
+	newJson := []byte(`{}`)
+	var err, err2 error
+	var val string
+	for _, k := range s.keys {
+		val, err = GetString(json, k)
+		val = formatType(val)
+		newJson, err2 = AddKeyValueString(newJson, k, val)
+		if err == nil {
+			if err2 != nil {
+				return nil, err
+			}
+		}
+	}
+	return newJson, nil
+}
+
+// MutateJsonAbs use for mutating a json to another json with a scheme.
+func (s *Scheme) MutateJsonAbs(json []byte) ([]byte, error) {
+	newJson := []byte(`{}`)
+	var err error
+	var val string
+	for _, k := range s.keys {
+		val, err = GetString(json, k)
+		if err != nil {
+			return nil, err
+		}
+		val = formatType(val)
+		newJson, err = AddKeyValueString(newJson, k, val)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return newJson, nil
+}
+
+func (s *Scheme) Check(json []byte) bool {
+	for _, k := range s.keys {
+		_, err := Get(json, k)
+		if err != nil {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *Scheme) CheckAbs(json []byte) bool {
+	keys, err := GetKeys(json)
+	if err != nil {
+		return false
+	}
+	if len(keys) != len(s.keys) {
+		return false
+	}
+	for i := 0; i < len(keys); i++ {
+		has := false
+		key := keys[i]
+		for j := 0; j < len(s.keys); j++ {
+			if key == s.keys[j] {
+				has = true
+				break
+			}
+		}
+		if !has {
+			return false
+		}
+	}
+	return true
 }
 
 // Add adds a new key value to the current scheme.

@@ -17,18 +17,17 @@ const (
 )
 
 var (
-	testFiles         []string
-	testFileDir       string = "test" + sep() + testFileName
-	pathsFileNameDir  string = "test" + sep() + pathsFileName
-	valuesFileNameDir string = "test" + sep() + valuesFileName
-	// tempDir              string =
-	errorSkipPath      error = errors.New("skipped, no paths file found")
-	errorSkipValue     error = errors.New("skipped, no values file found")
-	errorSkipJSON      error = errors.New("skipped, no json file found")
-	errorTriggerFailed error = errors.New("skipped, node trigger failed")
-	errorEmptyPath     error = errors.New("skipped, empty path")
-	errorNullValue     error = errors.New("skipped, null value")
-	errorNullArray     error = errors.New("skipped, null array")
+	testFiles          []string
+	testFileDir        string = "test" + sep() + testFileName
+	pathsFileNameDir   string = "test" + sep() + pathsFileName
+	valuesFileNameDir  string = "test" + sep() + valuesFileName
+	errorSkipPath      error  = errors.New("skipped, no paths file found")
+	errorSkipValue     error  = errors.New("skipped, no values file found")
+	errorSkipJSON      error  = errors.New("skipped, no json file found")
+	errorTriggerFailed error  = errors.New("skipped, node trigger failed")
+	errorEmptyPath     error  = errors.New("skipped, empty path")
+	errorNullValue     error  = errors.New("skipped, null value")
+	errorNullArray     error  = errors.New("skipped, null array")
 )
 
 func init() {
@@ -43,7 +42,7 @@ func triggerNode(state string, fileName string) error {
 	writeFile(testFileDir, readFile(testsDir+fileName))
 	str, err := executeNode("node", "test/test-case-creator.js", state)
 	if err != nil {
-		return fmt.Errorf("err:%v inner:%v", errorTriggerFailed, str)
+		return fmt.Errorf("err:%v inner:%v err:%v", errorTriggerFailed, err, str)
 	}
 	return nil
 }
@@ -360,6 +359,80 @@ func TestInterperterIterateKeyValue(t *testing.T) {
 			return nil, errorMessage("IterateKeyValue/" + sticker), "*expected*", sticker
 		}
 		return nil, nil, "", sticker
+	})
+}
+
+func TestInterpreterGetKeys(t *testing.T) {
+	coreTestFunction(t, "keys", func(json []byte, path []string, expected string) ([]byte, error, string, string) {
+		sticker := "Interpreter.GetKeys"
+		keys, err := GetKeys(json, path...)
+		if err != nil {
+			t.Logf("error. %v\n", err)
+			return nil, err, expected, sticker
+		}
+		expKeys := ParseArray(expected)
+		if !stringArrayEqual(keys, expKeys) {
+			return []byte("some element"), errors.New("not equal."), "some element", sticker
+		}
+		return []byte(""), nil, "", sticker
+	})
+}
+
+func TestInterpreterGetValues(t *testing.T) {
+	coreTestFunction(t, "values", func(json []byte, path []string, expected string) ([]byte, error, string, string) {
+		sticker := "Interpreter.GetValues"
+		json = Flatten(json)
+		values, err := GetValues(json, path...)
+		if err != nil {
+			t.Logf("error. %v\n", err)
+			return nil, err, expected, sticker
+		}
+		expValues := ParseArray(expected)
+		if !stringArrayEqual(values, expValues) {
+			return []byte("some element"), errors.New("not equal."), "some element", sticker
+		}
+		return []byte(""), nil, "", sticker
+	})
+}
+
+func TestInterpreterGetKeysValues(t *testing.T) {
+	coreTestFunction(t, "keys", func(json []byte, path []string, expected string) ([]byte, error, string, string) {
+		sticker := "Interpreter.GetKeysValues"
+		json = Flatten(json)
+		expValues, err := GetValues(json, path...)
+		if err != nil {
+			t.Logf("error. %v\n", err)
+			return nil, err, expected, sticker
+		}
+		expKeys, err := GetKeys(json, path...)
+		if err != nil {
+			t.Logf("error. %v\n", err)
+			return nil, err, expected, sticker
+		}
+		keys, values, err := GetKeysValues(json, path...)
+		if err != nil {
+			t.Logf("error. %v\n", err)
+			return nil, err, expected, sticker
+		}
+		if !stringArrayEqual(keys, expKeys) || !stringArrayEqual(values, expValues) {
+			return []byte("some element"), errors.New("not equal."), "some element", sticker
+		}
+		return []byte(""), nil, "", sticker
+	})
+}
+
+func TestInterpreterGetLength(t *testing.T) {
+	coreTestFunction(t, "length", func(json []byte, path []string, expected string) ([]byte, error, string, string) {
+		sticker := "Interpreter.Length"
+		length, err := Length(json, path...)
+		if err != nil {
+			t.Logf("error. %v\n", err)
+			return nil, err, expected, sticker
+		}
+		if strconv.Itoa(length) != expected {
+			return []byte(strconv.Itoa(length)), errors.New("not equal."), expected, sticker
+		}
+		return []byte(""), nil, "", sticker
 	})
 }
 

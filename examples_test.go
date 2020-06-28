@@ -153,6 +153,102 @@ func ExampleIterateKeyValue() {
 	//value: go
 	//key  : uuid
 	//value: 4a1531c25d5ef124295a
+	//key  : active
+	//value: true
+}
+
+func ExampleGetKeys() {
+	json := []byte(`{"index":42,"user":"eco","language":"go","uuid":"4a1531c25d5ef124295a","active":true}`)
+
+	keys, err := GetKeys(json)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(keys)
+	// Output: [index user language uuid active]
+}
+
+func ExampleGetValues() {
+	json := []byte(`{"index":42,"user":"eco","language":"go","uuid":"4a1531c25d5ef124295a","active":true}`)
+
+	values, err := GetValues(json)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(values)
+	// Output: [42 eco go 4a1531c25d5ef124295a true]
+}
+
+func ExampleGetKeysValues() {
+	json := []byte(`{"index":42,"user":"eco","language":"go","uuid":"4a1531c25d5ef124295a","active":true}`)
+
+	keys, values, err := GetKeysValues(json)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(keys)
+	fmt.Println(values)
+	// Output: [index user language uuid active]
+	//[42 eco go 4a1531c25d5ef124295a true]
+}
+
+func ExampleGetMap() {
+	json := []byte(`{"uuid":"4a1531c25d5ef124295a","personal":{"index":42,"user":"eco","language":"go"}}`)
+
+	personal, err := GetMap(json, "personal")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(personal["index"])
+	fmt.Println(personal["user"])
+	fmt.Println(personal["language"])
+	// Output: 42
+	//eco
+	//go
+}
+
+func ExampleGetAll() {
+	json := []byte(`{"uuid":"4a1531c25d5ef124295a","personal":{"index":42,"user":"eco","language":"go"}}`)
+
+	keys := []string{"index", "language"}
+	allINeed, err := GetAll(json, keys, "personal")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(allINeed)
+	// Output: [42 go]
+}
+
+func ExampleGetAllMap() {
+	json := []byte(`{"uuid":"4a1531c25d5ef124295a","personal":{"index":42,"user":"eco","language":"go"}}`)
+
+	keys := []string{"index", "language"}
+	allINeed, err := GetAllMap(json, keys, "personal")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(allINeed["index"])
+	fmt.Println(allINeed["language"])
+	// Output: 42
+	//go
+}
+
+func ExampleLength() {
+	json := []byte(`{"user":"eco","languages":["go","java","python","C","Cpp"]}`)
+
+	length, err := Length(json, "languages")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(length)
+	// Output: 5
 }
 
 func ExampleMakeArray() {

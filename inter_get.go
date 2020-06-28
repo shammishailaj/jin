@@ -1,6 +1,8 @@
 package jin
 
-import "strconv"
+import (
+	"strconv"
+)
 
 // Get returns the value that path has pointed.
 // It stripes quotation marks from string values.
@@ -303,4 +305,356 @@ func GetBoolArray(json []byte, path ...string) ([]bool, error) {
 		return newArray, nil
 	}
 	return nil, boolArrayParseError(val)
+}
+
+// GetKeys not tested yet
+// Gets all keys that path has pointed.
+func GetKeys(json []byte, path ...string) ([]string, error) {
+	var keys []string
+	if string(json) == "{}" {
+		return nil, generalEmptyError()
+	}
+	var start int
+	var err error
+	if len(path) == 0 {
+		for space(json[start]) {
+			if start > len(json)-1 {
+				return nil, badJSONError(start)
+			}
+			start++
+			continue
+		}
+	} else {
+		_, start, _, err = core(json, true, path...)
+		if err != nil {
+			return nil, err
+		}
+	}
+	chars := []byte{34, 44, 58, 91, 93, 123, 125}
+	isJSONChar := make([]bool, 256)
+	for _, v := range chars {
+		isJSONChar[v] = true
+	}
+	if json[start] == 123 {
+		keyStart := 0
+		keyEnd := 0
+		inQuote := false
+		level := 0
+		for i := start; i < len(json); i++ {
+			curr := json[i]
+			if !isJSONChar[curr] {
+				continue
+			}
+			if curr == 34 {
+				if inQuote {
+					for n := i - 1; n > -1; n-- {
+						if json[n] != 92 {
+							if (i-n)%2 != 0 {
+								inQuote = !inQuote
+								break
+							} else {
+								goto cont
+							}
+						}
+						continue
+					}
+				} else {
+					inQuote = !inQuote
+				}
+				if inQuote {
+					keyStart = i
+					continue
+				}
+				keyEnd = i
+			cont:
+				continue
+			}
+			if inQuote {
+				continue
+			} else {
+				if curr == 91 || curr == 123 {
+					level++
+					continue
+				}
+				if curr == 93 || curr == 125 {
+					if level == 1 {
+						break
+					}
+					level--
+					continue
+				}
+				if curr == 58 {
+					if level == 1 {
+						key := json[keyStart+1 : keyEnd]
+						keys = append(keys, string(key))
+					}
+					continue
+				}
+			}
+		}
+		return keys, nil
+	}
+	return nil, objectExpectedError()
+}
+
+// GetValues not tested yet
+// Gets all values that path has pointed.
+func GetValues(json []byte, path ...string) ([]string, error) {
+	var values []string
+	if string(json) == "{}" {
+		return nil, generalEmptyError()
+	}
+	var start int
+	var err error
+	if len(path) == 0 {
+		for space(json[start]) {
+			if start > len(json)-1 {
+				return nil, badJSONError(start)
+			}
+			start++
+			continue
+		}
+	} else {
+		_, start, _, err = core(json, true, path...)
+		if err != nil {
+			return nil, err
+		}
+	}
+	chars := []byte{34, 44, 58, 91, 93, 123, 125}
+	isJSONChar := make([]bool, 256)
+	for _, v := range chars {
+		isJSONChar[v] = true
+	}
+	if json[start] == 123 {
+		inQuote := false
+		level := 0
+		for i := start; i < len(json); i++ {
+			curr := json[i]
+			if !isJSONChar[curr] {
+				continue
+			}
+			if curr == 34 {
+				if inQuote {
+					for n := i - 1; n > -1; n-- {
+						if json[n] != 92 {
+							if (i-n)%2 != 0 {
+								inQuote = !inQuote
+								break
+							} else {
+								goto cont
+							}
+						}
+						continue
+					}
+				} else {
+					inQuote = !inQuote
+				}
+			cont:
+				continue
+			}
+			if inQuote {
+				continue
+			} else {
+				if curr == 91 || curr == 123 {
+					level++
+					continue
+				}
+				if curr == 93 || curr == 125 {
+					if level == 1 {
+						value := cleanValueString(string(json[start:i]))
+						values = append(values, value)
+						start = i + 1
+						break
+					}
+					level--
+					continue
+				}
+				if curr == 58 {
+					if level == 1 {
+						start = i + 1
+					}
+					continue
+				}
+				if curr == 44 {
+					if level == 1 {
+						value := cleanValueString(string(json[start:i]))
+						values = append(values, value)
+						start = i + 1
+					}
+				}
+			}
+		}
+		return values, nil
+	}
+	return nil, objectExpectedError()
+}
+
+// GetKeysValues not tested yet
+// Gets all keys and values that path has pointed.
+func GetKeysValues(json []byte, path ...string) ([]string, []string, error) {
+	var values []string
+	var keys []string
+	if string(json) == "{}" {
+		return nil, nil, generalEmptyError()
+	}
+	var start int
+	var err error
+	if len(path) == 0 {
+		for space(json[start]) {
+			if start > len(json)-1 {
+				return nil, nil, badJSONError(start)
+			}
+			start++
+			continue
+		}
+	} else {
+		_, start, _, err = core(json, true, path...)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	chars := []byte{34, 44, 58, 91, 93, 123, 125}
+	isJSONChar := make([]bool, 256)
+	for _, v := range chars {
+		isJSONChar[v] = true
+	}
+	if json[start] == 123 {
+		keyStart := 0
+		keyEnd := 0
+		inQuote := false
+		level := 0
+		for i := start; i < len(json); i++ {
+			curr := json[i]
+			if !isJSONChar[curr] {
+				continue
+			}
+			if curr == 34 {
+				if inQuote {
+					for n := i - 1; n > -1; n-- {
+						if json[n] != 92 {
+							if (i-n)%2 != 0 {
+								inQuote = !inQuote
+								break
+							} else {
+								goto cont
+							}
+						}
+						continue
+					}
+				} else {
+					inQuote = !inQuote
+				}
+				if inQuote {
+					keyStart = i
+					continue
+				}
+				keyEnd = i
+			cont:
+				continue
+			}
+			if inQuote {
+				continue
+			} else {
+				if curr == 91 || curr == 123 {
+					level++
+					continue
+				}
+				if curr == 93 || curr == 125 {
+					if level == 1 {
+						value := cleanValueString(string(json[start:i]))
+						values = append(values, value)
+						start = i + 1
+						break
+					}
+					level--
+					continue
+				}
+				if curr == 58 {
+					if level == 1 {
+						key := json[keyStart+1 : keyEnd]
+						keys = append(keys, string(key))
+						start = i + 1
+					}
+					continue
+				}
+				if curr == 44 {
+					if level == 1 {
+						value := cleanValueString(string(json[start:i]))
+						values = append(values, value)
+						start = i + 1
+					}
+				}
+			}
+		}
+		return keys, values, nil
+	}
+	return nil, nil, objectExpectedError()
+}
+
+// GetKeysValues not tested yet
+// Gets all keys and values pair with string to string map.
+func GetMap(json []byte, path ...string) (map[string]string, error) {
+	if string(json) == "[]" || string(json) == "{}" {
+		return nil, nil
+	}
+	start, end, err := getStartEnd(json, path...)
+	if err != nil {
+		return nil, err
+	}
+	mainMap := make(map[string]string)
+	if json[start] == 123 && json[end-1] == 125 {
+		err = IterateKeyValue(json, func(key, val []byte) bool {
+			mainMap[string(key)] = string(val)
+			return true
+		}, path...)
+		if err != nil {
+			return nil, err
+		}
+		return mainMap, nil
+	}
+	if json[start] == 91 && json[end-1] == 93 {
+		count := 0
+		err = IterateArray(json, func(val []byte) bool {
+			mainMap[strconv.Itoa(count)] = string(val)
+			count++
+			return true
+		}, path...)
+		if err != nil {
+			return nil, err
+		}
+		return mainMap, nil
+	}
+	return nil, badJSONError(start)
+}
+
+// GetAll not tested yet
+// GetAll gets all values of path+key has pointed.
+func GetAll(json []byte, keys []string, path ...string) ([]string, error) {
+	var err error
+	var val string
+	results := make([]string, 0, len(keys))
+	for _, k := range keys {
+		val, err = GetString(json, append(path, k)...)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, val)
+	}
+	return results, nil
+}
+
+// GetAllMap not tested yet
+// GetAllMap gets all values of path+key has pointed as string to string map.
+func GetAllMap(json []byte, keys []string, path ...string) (map[string]string, error) {
+	var err error
+	var val string
+	results := make(map[string]string)
+	for _, k := range keys {
+		val, err = GetString(json, append(path, k)...)
+		if err != nil {
+			return nil, err
+		}
+		results[k] = val
+	}
+	return results, nil
 }

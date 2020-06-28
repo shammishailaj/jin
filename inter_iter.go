@@ -4,6 +4,9 @@ package jin
 // It stripes quotation marks from string values befour return.
 // Path value can be left blank for access main JSON.
 func IterateArray(json []byte, callback func([]byte) bool, path ...string) error {
+	if string(json) == "[]" {
+		return generalEmptyError()
+	}
 	var start int
 	var err error
 	if len(path) == 0 {
@@ -93,6 +96,9 @@ func IterateArray(json []byte, callback func([]byte) bool, path ...string) error
 // It stripes quotation marks from string values befour return.
 // Path value can be left blank for access main JSON.
 func IterateKeyValue(json []byte, callback func([]byte, []byte) bool, path ...string) error {
+	if string(json) == "{}" {
+		return generalEmptyError()
+	}
 	var start int
 	var err error
 	var end int
@@ -121,7 +127,7 @@ func IterateKeyValue(json []byte, callback func([]byte, []byte) bool, path ...st
 		inQuote := false
 		level := 0
 		var key []byte
-		for i := start + 1; i < len(json); i++ {
+		for i := start; i < len(json); i++ {
 			curr := json[i]
 			if !isJSONChar[curr] {
 				continue
@@ -158,18 +164,15 @@ func IterateKeyValue(json []byte, callback func([]byte, []byte) bool, path ...st
 					continue
 				}
 				if curr == 93 || curr == 125 {
-					if level < 1 {
-						return nil
-					}
 					if curr == 125 {
-						if level == 0 {
+						if level == 1 {
 							for j := start; j < i; j++ {
 								if !space(json[j]) {
 									start = j
 									break
 								}
 							}
-							for j := i - 1; j > start; j-- {
+							for j := i - 1; j > start-1; j-- {
 								if !space(json[j]) {
 									end = j
 									break
@@ -183,10 +186,13 @@ func IterateKeyValue(json []byte, callback func([]byte, []byte) bool, path ...st
 							return nil
 						}
 					}
+					if level == 1 {
+						return nil
+					}
 					level--
 					continue
 				}
-				if level == 0 {
+				if level == 1 {
 					if curr == 44 {
 						end = i - 1
 						for j := start; j < i; j++ {
